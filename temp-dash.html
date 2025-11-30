@@ -1,102 +1,156 @@
-<script>
-  const USE_MOCK = true;   // set to false when you have real nodes
-
-  // Pretend these are your slots
-  const SLOT_DEVICES = [
-    { id: "A1", ip: "192.168.1.50" },
-    { id: "A2", ip: "192.168.1.51" },
-    { id: "A3", ip: "192.168.1.52" },
-  ];
-
-  const slotsContainer = document.getElementById('slots');
-  const slotElements = {};
-  const mockState = {};
-
-  function createSlotCard(slot) {
-    const card = document.createElement('div');
-    card.className = 'slot-card';
-
-    const idEl = document.createElement('div');
-    idEl.className = 'slot-id';
-    idEl.textContent = slot.id;
-    card.appendChild(idEl);
-
-    const statusEl = document.createElement('div');
-    statusEl.className = 'status unknown';
-    statusEl.textContent = 'Unknown';
-    card.appendChild(statusEl);
-
-    const ipEl = document.createElement('div');
-    ipEl.className = 'ip';
-    ipEl.textContent = `IP: ${slot.ip}`;
-    card.appendChild(ipEl);
-
-    slotsContainer.appendChild(card);
-
-    slotElements[slot.id] = { card, statusEl, ipEl };
-    mockState[slot.id] = false; // start as empty
-  }
-
-  function updateSlotUI(slotId, state) {
-    const elem = slotElements[slotId];
-    if (!elem) return;
-
-    elem.statusEl.classList.remove('occupied', 'empty', 'unknown');
-
-    if (state === 'occupied') {
-      elem.statusEl.classList.add('occupied');
-      elem.statusEl.textContent = 'Occupied';
-    } else if (state === 'empty') {
-      elem.statusEl.classList.add('empty');
-      elem.statusEl.textContent = 'Empty';
-    } else {
-      elem.statusEl.classList.add('unknown');
-      elem.statusEl.textContent = 'Offline / Error';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Parking Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
     }
-  }
+    h1 {
+      text-align: center;
+    }
+    #slots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+    }
+    .slot-card {
+      width: 150px;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background: #ffffff;
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .slot-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .slot-id {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .status {
+      font-size: 16px;
+      font-weight: bold;
+      padding: 4px 0;
+      border-radius: 4px;
+      color: #ffffff;
+    }
+    .occupied {
+      background-color: #e53935; /* red */
+    }
+    .empty {
+      background-color: #43a047; /* green */
+    }
+    .unknown {
+      background-color: #757575; /* grey */
+    }
+    .ip {
+      font-size: 12px;
+      color: #555;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Smart Parking Dashboard</h1>
+  <div id="slots"></div>
 
-  // --- MOCK IMPLEMENTATION ---
-  function mockFetchSlotStatus(slot) {
-    // Flip state randomly
-    mockState[slot.id] = Math.random() > 0.5;
-    updateSlotUI(slot.id, mockState[slot.id] ? 'occupied' : 'empty');
-  }
+  <script>
+    // === Configure your slot devices here ===
+    const SLOT_DEVICES = [
+      { id: "A1", ip: "192.168.1.50" },
+      { id: "A2", ip: "192.168.1.51" },
+      { id: "A3", ip: "192.168.1.52" },
+      // add more slots as needed
+    ];
 
-  // --- REAL IMPLEMENTATION ---
-  async function realFetchSlotStatus(slot) {
-    try {
-      const response = await fetch(`http://${slot.ip}/status`, { cache: 'no-store' });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      const data = await response.json();
-      if (data.occupied === true) {
-        updateSlotUI(slot.id, 'occupied');
-      } else if (data.occupied === false) {
-        updateSlotUI(slot.id, 'empty');
+    const slotsContainer = document.getElementById('slots');
+    const slotElements = {};
+
+    function createSlotCard(slot) {
+      const card = document.createElement('div');
+      card.className = 'slot-card';
+
+      const idEl = document.createElement('div');
+      idEl.className = 'slot-id';
+      idEl.textContent = slot.id;
+      card.appendChild(idEl);
+
+      const statusEl = document.createElement('div');
+      statusEl.className = 'status unknown';
+      statusEl.textContent = 'Unknown';
+      card.appendChild(statusEl);
+
+      const ipEl = document.createElement('div');
+      ipEl.className = 'ip';
+      ipEl.textContent = `IP: ${slot.ip}`;
+      card.appendChild(ipEl);
+
+      slotsContainer.appendChild(card);
+
+      slotElements[slot.id] = { card, statusEl, ipEl };
+    }
+
+    function updateSlotUI(slotId, state) {
+      const elem = slotElements[slotId];
+      if (!elem) return;
+
+      elem.statusEl.classList.remove('occupied', 'empty', 'unknown');
+
+      if (state === 'occupied') {
+        elem.statusEl.classList.add('occupied');
+        elem.statusEl.textContent = 'Occupied';
+      } else if (state === 'empty') {
+        elem.statusEl.classList.add('empty');
+        elem.statusEl.textContent = 'Empty';
       } else {
+        elem.statusEl.classList.add('unknown');
+        elem.statusEl.textContent = 'Offline / Error';
+      }
+    }
+
+    async function fetchSlotStatus(slot) {
+      try {
+        const response = await fetch(`http://${slot.ip}/status`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+
+        if (data.occupied === true) {
+          updateSlotUI(slot.id, 'occupied');
+        } else if (data.occupied === false) {
+          updateSlotUI(slot.id, 'empty');
+        } else {
+          updateSlotUI(slot.id, 'unknown');
+        }
+      } catch (err) {
+        console.error(`Error fetching status for ${slot.id}:`, err);
         updateSlotUI(slot.id, 'unknown');
       }
-    } catch (err) {
-      console.error(`Error fetching status for ${slot.id}:`, err);
-      updateSlotUI(slot.id, 'unknown');
     }
-  }
 
-  function refreshAllSlots() {
-    for (const slot of SLOT_DEVICES) {
-      if (USE_MOCK) {
-        mockFetchSlotStatus(slot);
-      } else {
-        realFetchSlotStatus(slot);
+    async function refreshAllSlots() {
+      for (const slot of SLOT_DEVICES) {
+        fetchSlotStatus(slot);
       }
     }
-  }
 
-  // Initialize UI
-  SLOT_DEVICES.forEach(createSlotCard);
+    // Initialize UI
+    SLOT_DEVICES.forEach(createSlotCard);
 
-  // First load
-  refreshAllSlots();
+    // First load
+    refreshAllSlots();
 
-  // Auto-refresh every 3 seconds
-  setInterval(refreshAllSlots, 3000);
-</script>
+    // Auto-refresh every 3 seconds
+    setInterval(refreshAllSlots, 3000);
+  </script>
+</body>
+</html>
